@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video AI Tool v2 - Editor de Vídeo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1000px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .panel h2 .icon {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover { border-color: #00d4ff; background: rgba(0,212,255,0.1); }
+        .upload-area.dragover { border-color: #7b2cbf; background: rgba(123,44,191,0.2); }
+        .upload-area input { display: none; }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #fff; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,212,255,0.4); }
+        .btn-success { background: linear-gradient(135deg, #00c853, #009624); color: #fff; }
+        .btn-danger { background: linear-gradient(135deg, #ff5252, #d32f2f); color: #fff; }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-sm { padding: 8px 15px; font-size: 0.9em; }
+
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .image-card {
+            position: relative;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .image-card:hover { transform: scale(1.05); }
+        .image-card.selected { border-color: #00d4ff; box-shadow: 0 0 20px rgba(0,212,255,0.5); }
+        .image-card img { width: 100%; height: 100px; object-fit: cover; }
+        .image-card .info { padding: 8px; font-size: 0.8em; }
+
+        .image-card .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 25px;
+            height: 25px;
+            background: rgba(255,0,0,0.8);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            display: none;
+        }
+
+        .image-card:hover .remove-btn { display: block; }
+
+        .image-editor {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .image-editor.active { display: block; }
+
+        .editor-preview {
+            width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 1em;
+        }
+
+        input[type="range"] { width: 100%; }
+        input[type="color"] { width: 50px; height: 35px; border: none; border-radius: 6px; cursor: pointer; }
+
+        .section-title {
+            font-size: 1em;
+            color: #00d4ff;
+            margin: 20px 0 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0,212,255,0.3);
+        }
+
+        .subtitle-list { max-height: 300px; overflow-y: auto; }
+
+        .subtitle-item {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle-item .time-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .subtitle-item .time-row input { width: 80px; }
+
+        .subtitle-item textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .style-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+
+        .video-preview { width: 100%; border-radius: 10px; background: #000; margin-top: 20px; }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status-text { text-align: center; color: #888; margin: 10px 0; }
+
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; }
+
+        .tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 8px 8px 0 0;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active { background: rgba(0,212,255,0.2); color: #00d4ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .full-width { grid-column: 1 / -1; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+
+        .action-buttons { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .overlay-section {
+            background: rgba(123,44,191,0.1);
+            border: 1px solid rgba(123,44,191,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .range-value {
+            display: inline-block;
+            min-width: 40px;
+            text-align: right;
+            color: #00d4ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Video AI Tool v2</h1>
+            <p>Editor de Vídeo com Efeitos Visuais e Overlays</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Painel de Áudio -->
+            <div class="panel">
+                <h2><span class="icon">🎵</span> 1. Áudio e Transcrição</h2>
+                
+                <div class="upload-area" id="audioUploadArea">
+                    <input type="file" id="audioInput" accept="audio/*">
+                    <p>📁 Arraste o áudio aqui ou clique para selecionar</p>
+                    <small>MP3, WAV, M4A, etc.</small>
+                </div>
+
+                <div id="audioInfo" style="display:none; margin-bottom: 15px;">
+                    <p>✅ Áudio carregado: <span id="audioName"></span></p>
+                </div>
+
+                <button class="btn btn-primary" id="transcribeBtn" disabled>
+                    📝 Transcrever Áudio
+                </button>
+
+                <div id="transcriptionStatus" class="status-text"></div>
+            </div>
+
+            <!-- Painel de Imagens -->
+            <div class="panel">
+                <h2><span class="icon">🖼️</span> 2. Imagens</h2>
+                
+                <div class="upload-area" id="imageUploadArea">
+                    <input type="file" id="imageInput" accept="image/*" multiple>
+                    <p>📁 Arraste imagens aqui ou clique para selecionar</p>
+                    <small>PNG, JPG, WEBP (múltiplas permitidas)</small>
+                </div>
+
+                <div class="image-gallery" id="imageGallery"></div>
+
+                <div class="image-editor" id="imageEditor">
+                    <h3 style="margin-bottom: 15px;">⚙️ Configurações da Imagem</h3>
+                    <img class="editor-preview" id="editorPreview" src="" alt="Preview">
+                    
+                    <!-- Tempo -->
+                    <div class="section-title">⏱️ Tempo</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Início (s)</label>
+                            <input type="number" id="imgStartTime" step="0.1" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Fim (s)</label>
+                            <input type="number" id="imgEndTime" step="0.1" min="0" value="5">
+                        </div>
+                    </div>
+
+                    <!-- Filtros de Cor -->
+                    <div class="section-title">🎨 Filtros de Cor</div>
+                    <div class="form-group">
+                        <label>Filtro</label>
+                        <select id="imgFilter">
+                            <option value="none">Nenhum</option>
+                            <option value="grayscale">Preto e Branco</option>
+                            <option value="sepia">Sépia</option>
+                            <option value="vintage">Vintage</option>
+                            <option value="cold">Frio (Azulado)</option>
+                            <option value="warm">Quente (Amarelado)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Brilho <span class="range-value" id="brightnessVal">1.0</span></label>
+                            <input type="range" id="imgBrightness" min="0.5" max="2" step="0.1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Contraste <span class="range-value" id="contrastVal">1.0</span></label>
+                            <input type="range" id="imgContrast" min="0.5" max="2" step="0.1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Saturação <span class="range-value" id="saturationVal">1.0</span></label>
+                            <input type="range" id="imgSaturation" min="0" max="2" step="0.1" value="1">
+                        </div>
+                    </div>
+
+                    <!-- Efeitos Visuais -->
+                    <div class="section-title">✨ Efeitos Visuais</div>
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Brilho (Glow) <span class="range-value" id="glowVal">0</span></label>
+                            <input type="range" id="imgGlow" min="0" max="100" step="5" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Vinheta <span class="range-value" id="vignetteVal">0</span></label>
+                            <input type="range" id="imgVignette" min="0" max="100" step="5" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Granulado <span class="range-value" id="grainVal">0</span></label>
+                            <input type="range" id="imgGrain" min="0" max="100" step="5" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Desfoque <span class="range-value" id="blurVal">0</span></label>
+                            <input type="range" id="imgBlur" min="0" max="20" step="1" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Nitidez <span class="range-value" id="sharpenVal">0</span></label>
+                            <input type="range" id="imgSharpen" min="0" max="100" step="5" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Light Leak</label>
+                            <select id="imgLightLeak">
+                                <option value="none">Nenhum</option>
+                                <option value="warm">Quente</option>
+                                <option value="cool">Frio</option>
+                                <option value="rainbow">Colorido</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Movimento -->
+                    <div class="section-title">🎥 Movimento (Ken Burns)</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Zoom</label>
+                            <select id="imgZoom">
+                                <option value="none">Nenhum</option>
+                                <option value="zoom_in">Zoom In</option>
+                                <option value="zoom_out">Zoom Out</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pan (Movimento)</label>
+                            <select id="imgPan">
+                                <option value="none">Nenhum</option>
+                                <option value="left_to_right">Esquerda → Direita</option>
+                                <option value="right_to_left">Direita → Esquerda</option>
+                                <option value="top_to_bottom">Cima → Baixo</option>
+                                <option value="bottom_to_top">Baixo → Cima</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Transições -->
+                    <div class="section-title">🎬 Transições</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Entrada</label>
+                            <select id="imgTransitionIn">
+                                <option value="none">Nenhuma</option>
+                                <option value="fade">Fade In</option>
+                                <option value="blur">Blur In</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Saída</label>
+                            <select id="imgTransitionOut">
+                                <option value="none">Nenhuma</option>
+                                <option value="fade">Fade Out</option>
+                                <option value="blur">Blur Out</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Duração Entrada (s)</label>
+                            <input type="number" id="imgTransitionInDur" step="0.1" min="0" max="3" value="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Duração Saída (s)</label>
+                            <input type="number" id="imgTransitionOutDur" step="0.1" min="0" max="3" value="0.5">
+                        </div>
+                    </div>
+
+                    <!-- Overlay -->
+                    <div class="section-title">✨ Overlay (Faíscas, Bokeh, etc.)</div>
+                    <div class="overlay-section">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="overlayEnabled">
+                            <label for="overlayEnabled">Ativar Overlay</label>
+                        </div>
+                        
+                        <div id="overlayOptions" style="display: none; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Arquivo de Overlay</label>
+                                <select id="overlayFile">
+                                    <option value="">Selecione...</option>
+                                </select>
+                                <small style="color: #888;">Coloque arquivos .mp4/.mov na pasta "overlays"</small>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Opacidade <span class="range-value" id="overlayOpacityVal">50%</span></label>
+                                    <input type="range" id="overlayOpacity" min="0" max="100" step="5" value="50">
+                                </div>
+                                <div class="form-group">
+                                    <label>Modo de Mistura</label>
+                                    <select id="overlayBlend">
+                                        <option value="screen">Screen (Clarear)</option>
+                                        <option value="overlay">Overlay</option>
+                                        <option value="add">Adicionar</option>
+                                        <option value="multiply">Multiplicar</option>
+                                        <option value="softlight">Luz Suave</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 10px;">
+                            <input type="file" id="overlayUploadInput" accept="video/*,.gif" style="display:none">
+                            <button class="btn btn-sm btn-secondary" id="uploadOverlayBtn">📤 Enviar Novo Overlay</button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" id="saveImageBtn" style="margin-top: 20px; width: 100%;">
+                        💾 Salvar Configurações
+                    </button>
+                </div>
+            </div>
+
+            <!-- Painel de Legendas -->
+            <div class="panel full-width">
+                <h2><span class="icon">📝</span> 3. Legendas</h2>
+                
+                <div class="tabs">
+                    <button class="tab active" data-tab="subtitleList">Lista de Legendas</button>
+                    <button class="tab" data-tab="subtitleStyle">Estilo das Legendas</button>
+                </div>
+
+                <div class="tab-content active" id="subtitleList">
+                    <div class="subtitle-list" id="subtitleListContainer">
+                        <p style="color: #888; text-align: center;">Faça a transcrição do áudio para gerar as legendas</p>
+                    </div>
+                    <button class="btn btn-secondary" id="addSubtitleBtn" style="margin-top: 10px;">
+                        ➕ Adicionar Legenda Manual
+                    </button>
+                </div>
+
+                <div class="tab-content" id="subtitleStyle">
+                    <div class="style-options">
+                        <div class="form-group">
+                            <label>Fonte</label>
+                            <select id="subFont">
+                                <option value="Arial">Arial</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Georgia">Georgia</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Impact">Impact</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tamanho</label>
+                            <input type="number" id="subSize" value="48" min="12" max="120">
+                        </div>
+                        <div class="form-group">
+                            <label>Cor do Texto</label>
+                            <input type="color" id="subColor" value="#FFFFFF">
+                        </div>
+                        <div class="form-group">
+                            <label>Cor de Fundo</label>
+                            <select id="subBgColor">
+                                <option value="none">Sem fundo</option>
+                                <option value="#000000">Preto</option>
+                                <option value="#333333">Cinza Escuro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Posição</label>
+                            <select id="subPosition">
+                                <option value="bottom">Inferior</option>
+                                <option value="center">Centro</option>
+                                <option value="top">Superior</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Animação</label>
+                            <select id="subAnimation">
+                                <option value="none">Nenhuma</option>
+                                <option value="fade">Fade In/Out</option>
+                                <option value="typewriter">Máquina de Escrever</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="saveSubStyleBtn" style="margin-top: 15px;">
+                        💾 Salvar Estilo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Painel de Montagem -->
+            <div class="panel full-width">
+                <h2><span class="icon">🎬</span> 4. Montar Vídeo</h2>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-success" id="assembleBtn">
+                        🎬 Montar Vídeo Final
+                    </button>
+                    <button class="btn btn-primary" id="downloadBtn" disabled>
+                        📥 Baixar Vídeo
+                    </button>
+                    <button class="btn btn-danger" id="resetBtn">
+                        🗑️ Novo Projeto
+                    </button>
+                </div>
+
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="fill" id="progressFill"></div>
+                </div>
+                <div id="assembleStatus" class="status-text"></div>
+
+                <video class="video-preview" id="videoPreview" controls style="display: none;"></video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let images = [];
+        let segments = [];
+        let overlays = [];
+        let selectedImageId = null;
+
+        // Elementos
+        const audioInput = document.getElementById('audioInput');
+        const audioUploadArea = document.getElementById('audioUploadArea');
+        const imageInput = document.getElementById('imageInput');
+        const imageUploadArea = document.getElementById('imageUploadArea');
+        const imageGallery = document.getElementById('imageGallery');
+        const imageEditor = document.getElementById('imageEditor');
+
+        // ==================== INICIALIZAÇÃO ====================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOverlays();
+            setupEventListeners();
+        });
+
+        async function loadOverlays() {
+            try {
+                const response = await fetch('/list_overlays');
+                const data = await response.json();
+                overlays = data.overlays;
+                updateOverlaySelect();
+            } catch (error) {
+                console.error('Erro ao carregar overlays:', error);
+            }
+        }
+
+        function updateOverlaySelect() {
+            const select = document.getElementById('overlayFile');
+            select.innerHTML = '<option value="">Selecione...</option>';
+            overlays.forEach(ov => {
+                select.innerHTML += `<option value="${ov.filename}">${ov.name} (${ov.type})</option>`;
+            });
+        }
+
+        function setupEventListeners() {
+            // Overlay checkbox
+            document.getElementById('overlayEnabled').addEventListener('change', (e) => {
+                document.getElementById('overlayOptions').style.display = e.target.checked ? 'block' : 'none';
+            });
+
+            // Upload overlay
+            document.getElementById('uploadOverlayBtn').addEventListener('click', () => {
+                document.getElementById('overlayUploadInput').click();
+            });
+
+            document.getElementById('overlayUploadInput').addEventListener('change', async (e) => {
+                if (e.target.files.length) {
+                    const formData = new FormData();
+                    formData.append('overlay', e.target.files[0]);
+                    
+                    try {
+                        const response = await fetch('/upload_overlay', { method: 'POST', body: formData });
+                        const data = await response.json();
+                        if (data.success) {
+                            alert('✅ Overlay enviado!');
+                            loadOverlays();
+                        }
+                    } catch (error) {
+                        alert('Erro ao enviar overlay');
+                    }
+                }
+            });
+
+            // Range sliders
+            const rangeInputs = [
+                ['imgBrightness', 'brightnessVal'],
+                ['imgContrast', 'contrastVal'],
+                ['imgSaturation', 'saturationVal'],
+                ['imgGlow', 'glowVal'],
+                ['imgVignette', 'vignetteVal'],
+                ['imgGrain', 'grainVal'],
+                ['imgBlur', 'blurVal'],
+                ['imgSharpen', 'sharpenVal'],
+                ['overlayOpacity', 'overlayOpacityVal']
+            ];
+
+            rangeInputs.forEach(([inputId, valId]) => {
+                const input = document.getElementById(inputId);
+                const val = document.getElementById(valId);
+                if (input && val) {
+                    input.addEventListener('input', () => {
+                        val.textContent = inputId === 'overlayOpacity' ? input.value + '%' : input.value;
+                    });
+                }
+            });
+        }
+
+        // ==================== ÁUDIO ====================
+        
+        audioUploadArea.addEventListener('click', () => audioInput.click());
+        audioUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); audioUploadArea.classList.add('dragover'); });
+        audioUploadArea.addEventListener('dragleave', () => audioUploadArea.classList.remove('dragover'));
+        audioUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            audioUploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleAudioUpload(e.dataTransfer.files[0]);
+        });
+        audioInput.addEventListener('change', (e) => { if (e.target.files.length) handleAudioUpload(e.target.files[0]); });
+
+        async function handleAudioUpload(file) {
+            const formData = new FormData();
+            formData.append('audio', file);
+
+            try {
+                const response = await fetch('/upload_audio', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('audioInfo').style.display = 'block';
+                    document.getElementById('audioName').textContent = file.name;
+                    document.getElementById('transcribeBtn').disabled = false;
+                }
+            } catch (error) {
+                alert('Erro ao enviar áudio: ' + error);
+            }
+        }
+
+        document.getElementById('transcribeBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('transcribeBtn');
+            const status = document.getElementById('transcriptionStatus');
+            
+            btn.disabled = true;
+            status.textContent = '🔄 Transcrevendo... Aguarde...';
+
+            try {
+                const response = await fetch('/transcribe', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    segments = data.segments;
+                    renderSubtitles();
+                    status.textContent = `✅ ${segments.length} legendas geradas!`;
+                } else {
+                    status.textContent = '❌ Erro: ' + data.error;
+                }
+            } catch (error) {
+                status.textContent = '❌ Erro: ' + error;
+            }
+            
+            btn.disabled = false;
+        });
+
+        // ==================== IMAGENS ====================
+
+        imageUploadArea.addEventListener('click', () => imageInput.click());
+        imageUploadArea.addEventListener('dragover', (e) => { e.preventDefault(); imageUploadArea.classList.add('dragover'); });
+        imageUploadArea.addEventListener('dragleave', () => imageUploadArea.classList.remove('dragover'));
+        imageUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleImageUpload(e.dataTransfer.files);
+        });
+        imageInput.addEventListener('change', (e) => { if (e.target.files.length) handleImageUpload(e.target.files); });
+
+        async function handleImageUpload(files) {
+            const formData = new FormData();
+            for (let file of files) formData.append('images', file);
+
+            try {
+                const response = await fetch('/upload_images_batch', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                if (data.success) {
+                    images = images.concat(data.images);
+                    renderImageGallery();
+                }
+            } catch (error) {
+                alert('Erro ao enviar imagens: ' + error);
+            }
+        }
+
+        function renderImageGallery() {
+            imageGallery.innerHTML = '';
+            
+            images.forEach((img) => {
+                const card = document.createElement('div');
+                card.className = 'image-card' + (img.id === selectedImageId ? ' selected' : '');
+                card.innerHTML = `
+                    <img src="/get_image/${img.id}" alt="Imagem ${img.id}">
+                    <div class="info">${img.start_time}s - ${img.end_time}s</div>
+                    <button class="remove-btn" onclick="removeImage(${img.id}, event)">×</button>
+                `;
+                card.addEventListener('click', () => selectImage(img.id));
+                imageGallery.appendChild(card);
+            });
+        }
+
+        function selectImage(id) {
+            selectedImageId = id;
+            const img = images.find(i => i.id === id);
+            
+            if (img) {
+                document.getElementById('editorPreview').src = `/get_image/${id}`;
+                document.getElementById('imgStartTime').value = img.start_time;
+                document.getElementById('imgEndTime').value = img.end_time;
+                
+                // Filtros
+                document.getElementById('imgFilter').value = img.effects.filter;
+                document.getElementById('imgBrightness').value = img.effects.brightness;
+                document.getElementById('imgContrast').value = img.effects.contrast;
+                document.getElementById('imgSaturation').value = img.effects.saturation;
+                
+                // Efeitos visuais
+                document.getElementById('imgGlow').value = img.effects.glow || 0;
+                document.getElementById('imgVignette').value = img.effects.vignette || 0;
+                document.getElementById('imgGrain').value = img.effects.grain || 0;
+                document.getElementById('imgBlur').value = img.effects.blur || 0;
+                document.getElementById('imgSharpen').value = img.effects.sharpen || 0;
+                document.getElementById('imgLightLeak').value = img.effects.light_leak || 'none';
+                
+                // Movimento
+                document.getElementById('imgZoom').value = img.effects.zoom;
+                document.getElementById('imgPan').value = img.effects.pan || 'none';
+                
+                // Transições
+                document.getElementById('imgTransitionIn').value = img.transition_in.type;
+                document.getElementById('imgTransitionOut').value = img.transition_out.type;
+                document.getElementById('imgTransitionInDur').value = img.transition_in.duration;
+                document.getElementById('imgTransitionOutDur').value = img.transition_out.duration;
+                
+                // Overlay
+                const overlay = img.overlay || {};
+                document.getElementById('overlayEnabled').checked = overlay.enabled || false;
+                document.getElementById('overlayOptions').style.display = overlay.enabled ? 'block' : 'none';
+                document.getElementById('overlayFile').value = overlay.filename || '';
+                document.getElementById('overlayOpacity').value = (overlay.opacity || 0.5) * 100;
+                document.getElementById('overlayBlend').value = overlay.blend_mode || 'screen';
+                
+                updateRangeDisplays();
+                imageEditor.classList.add('active');
+            }
+            
+            renderImageGallery();
+        }
+
+        function updateRangeDisplays() {
+            document.getElementById('brightnessVal').textContent = document.getElementById('imgBrightness').value;
+            document.getElementById('contrastVal').textContent = document.getElementById('imgContrast').value;
+            document.getElementById('saturationVal').textContent = document.getElementById('imgSaturation').value;
+            document.getElementById('glowVal').textContent = document.getElementById('imgGlow').value;
+            document.getElementById('vignetteVal').textContent = document.getElementById('imgVignette').value;
+            document.getElementById('grainVal').textContent = document.getElementById('imgGrain').value;
+            document.getElementById('blurVal').textContent = document.getElementById('imgBlur').value;
+            document.getElementById('sharpenVal').textContent = document.getElementById('imgSharpen').value;
+            document.getElementById('overlayOpacityVal').textContent = document.getElementById('overlayOpacity').value + '%';
+        }
+
+        async function removeImage(id, event) {
+            event.stopPropagation();
+            
+            try {
+                await fetch(`/remove_image/${id}`, { method: 'DELETE' });
+                images = images.filter(i => i.id !== id);
+                
+                if (selectedImageId === id) {
+                    selectedImageId = null;
+                    imageEditor.classList.remove('active');
+                }
+                
+                renderImageGallery();
+            } catch (error) {
+                alert('Erro ao remover imagem: ' + error);
+            }
+        }
+
+        document.getElementById('saveImageBtn').addEventListener('click', async () => {
+            if (!selectedImageId) return;
+
+            const updates = {
+                start_time: parseFloat(document.getElementById('imgStartTime').value),
+                end_time: parseFloat(document.getElementById('imgEndTime').value),
+                effects: {
+                    filter: document.getElementById('imgFilter').value,
+                    brightness: parseFloat(document.getElementById('imgBrightness').value),
+                    contrast: parseFloat(document.getElementById('imgContrast').value),
+                    saturation: parseFloat(document.getElementById('imgSaturation').value),
+                    glow: parseInt(document.getElementById('imgGlow').value),
+                    vignette: parseInt(document.getElementById('imgVignette').value),
+                    grain: parseInt(document.getElementById('imgGrain').value),
+                    blur: parseInt(document.getElementById('imgBlur').value),
+                    sharpen: parseInt(document.getElementById('imgSharpen').value),
+                    light_leak: document.getElementById('imgLightLeak').value,
+                    zoom: document.getElementById('imgZoom').value,
+                    pan: document.getElementById('imgPan').value
+                },
+                overlay: {
+                    enabled: document.getElementById('overlayEnabled').checked,
+                    filename: document.getElementById('overlayFile').value,
+                    opacity: parseInt(document.getElementById('overlayOpacity').value) / 100,
+                    blend_mode: document.getElementById('overlayBlend').value
+                },
+                transition_in: {
+                    type: document.getElementById('imgTransitionIn').value,
+                    duration: parseFloat(document.getElementById('imgTransitionInDur').value)
+                },
+                transition_out: {
+                    type: document.getElementById('imgTransitionOut').value,
+                    duration: parseFloat(document.getElementById('imgTransitionOutDur').value)
+                }
+            };
+
+            try {
+                const response = await fetch(`/update_image/${selectedImageId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const index = images.findIndex(i => i.id === selectedImageId);
+                    if (index !== -1) images[index] = data.image;
+                    renderImageGallery();
+                    alert('✅ Configurações salvas!');
+                }
+            } catch (error) {
+                alert('Erro ao salvar: ' + error);
+            }
+        });
+
+        // ==================== LEGENDAS ====================
+
+        function renderSubtitles() {
+            const container = document.getElementById('subtitleListContainer');
+            if (segments.length === 0) {
+                container.innerHTML = '<p style="color: #888; text-align: center;">Nenhuma legenda ainda</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            segments.forEach((seg, index) => {
+                const item = document.createElement('div');
+                item.className = 'subtitle-item';
+                item.innerHTML = `
+                    <div class="time-row">
+                        <input type="number" step="0.1" value="${seg.start}" onchange="updateSegment(${index}, 'start', this.value)">
+                        <span>→</span>
+                        <input type="number" step="0.1" value="${seg.end}" onchange="updateSegment(${index}, 'end', this.value)">
+                        <button class="btn btn-danger btn-sm" onclick="removeSegment(${index})">🗑️</button>
+                    </div>
+                    <textarea onchange="updateSegment(${index}, 'text', this.value)">${seg.text}</textarea>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function updateSegment(index, field, value) {
+            if (field === 'start' || field === 'end') segments[index][field] = parseFloat(value);
+            else segments[index][field] = value;
+            saveSegments();
+        }
+
+        function removeSegment(index) {
+            segments.splice(index, 1);
+            renderSubtitles();
+            saveSegments();
+        }
+
+        document.getElementById('addSubtitleBtn').addEventListener('click', () => {
+            const lastEnd = segments.length > 0 ? segments[segments.length - 1].end : 0;
+            segments.push({ id: segments.length, start: lastEnd, end: lastEnd + 3, text: "Nova legenda" });
+            renderSubtitles();
+            saveSegments();
+        });
+
+        async function saveSegments() {
+            try {
+                await fetch('/update_segments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ segments })
+                });
+            } catch (error) {
+                console.error('Erro ao salvar legendas:', error);
+            }
+        }
+
+        // Tabs
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        document.getElementById('saveSubStyleBtn').addEventListener('click', async () => {
+            const config = {
+                font: document.getElementById('subFont').value,
+                size: parseInt(document.getElementById('subSize').value),
+                color: document.getElementById('subColor').value,
+                bg_color: document.getElementById('subBgColor').value,
+                position: document.getElementById('subPosition').value,
+                animation: document.getElementById('subAnimation').value
+            };
+
+            try {
+                await fetch('/update_subtitle_config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                alert('✅ Estilo salvo!');
+            } catch (error) {
+                alert('Erro: ' + error);
+            }
+        });
+
+        // ==================== MONTAGEM ====================
+
+        document.getElementById('assembleBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('assembleBtn');
+            const status = document.getElementById('assembleStatus');
+            const progressBar = document.getElementById('progressBar');
+            
+            btn.disabled = true;
+            progressBar.style.display = 'block';
+            status.textContent = '🔄 Montando vídeo...';
+
+            try {
+                const response = await fetch('/assemble_video', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    status.textContent = '✅ Vídeo montado com sucesso!';
+                    document.getElementById('downloadBtn').disabled = false;
+                    
+                    const video = document.getElementById('videoPreview');
+                    video.src = '/download_video?' + new Date().getTime();
+                    video.style.display = 'block';
+                } else {
+                    status.textContent = '❌ Erro: ' + data.error;
+                }
+            } catch (error) {
+                status.textContent = '❌ Erro: ' + error;
+            }
+
+            btn.disabled = false;
+            progressBar.style.display = 'none';
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            window.location.href = '/download_video';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', async () => {
+            if (!confirm('Tem certeza que deseja iniciar um novo projeto?')) return;
+            
+            await fetch('/reset_project', { method: 'POST' });
+            
+            images = [];
+            segments = [];
+            selectedImageId = null;
+            
+            renderImageGallery();
+            renderSubtitles();
+            imageEditor.classList.remove('active');
+            document.getElementById('audioInfo').style.display = 'none';
+            document.getElementById('videoPreview').style.display = 'none';
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('transcribeBtn').disabled = true;
+            document.getElementById('assembleStatus').textContent = '';
+            document.getElementById('transcriptionStatus').textContent = '';
+        });
+    </script>
+</body>
+</html>
